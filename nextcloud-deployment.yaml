@@ -1,0 +1,89 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nextcloud
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-pv
+  labels:
+    type: local
+  namespace: nextcloud
+spec:
+  storageClassName: standard
+  capacity:
+    storage: 150Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/opt/kubernetes/nextcloud-data"
+  persistentVolumeReclaimPolicy: Retain
+---    
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-pv-claim
+  labels:
+    app: polling-app
+  namespace: nextcloud
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 150Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: polling-app-nextcloud
+  labels:
+    app: polling-app
+  namespace: nextcloud
+spec:
+  selector:
+    app: polling-app
+  type: ClusterIP
+  ports:  
+  - name: http
+    port: 80
+    targetPort: 8888
+    protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: polling-app-nextcloud
+  labels:
+    app: polling-app
+  namespace: nextcloud
+spec:
+  selector:
+    matchLabels:
+      app: polling-app
+      tier: nextcloud
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: polling-app
+        tier: nextcloud
+    spec:
+      containers:
+      - image: wonderfall/nextcloud
+        name: nextcloud
+        env:
+        ports:
+        - containerPort: 8888
+          name: nextcloud
+        volumeMounts:
+        - name: nextcloud-persistent-storage
+          mountPath: /data
+      volumes:
+      - name: nextcloud-persistent-storage
+        persistentVolumeClaim:
+          claimName: nextcloud-pv-claim
