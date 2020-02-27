@@ -1,1 +1,24 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: grafana-ing
+  namespace: grafana
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "true"
+    kubernetes.io/tls-acme: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-staging # Edit after the first http01 challenge to letsencrypt-production 
+    kubernetes.io/ingress.class: "nginx"
 
+spec:
+  tls:
+  - hosts:
+    - cloud.redtoro.fr
+    secretName: cloud-cert
+  rules:
+  - host: cloud.redtoro.fr
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: polling-app-nextcloud-redtoro
+          servicePort: 80
